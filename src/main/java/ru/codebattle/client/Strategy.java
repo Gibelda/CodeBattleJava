@@ -6,161 +6,146 @@ import ru.codebattle.client.api.Direction;
 import ru.codebattle.client.api.GameBoard;
 
 import java.util.*;
-import java.util.List;
+
+import static ru.codebattle.client.api.BoardElementWithWeight.*;
+import static ru.codebattle.client.api.BoardElementWithWeight.ENEMY_HEAD_LEFT;
 
 public class Strategy {
     static int evilCount = 0;
-    static Direction prevDirection = Direction.STOP;
+    static boolean preEvil = false;
+    static Direction prevDirection;
 
-    enum State {
-        SLEEP, EVIL, USUAL
-    }
-
-    static State prevState = State.SLEEP;
-
-    public static boolean chooseAct() {
-        // TODO а это вообще актуально?
-        return false;
+    public static boolean chooseAct(GameBoard board) {
+        // TODO Р° СЌС‚Рѕ РІРѕРѕР±С‰Рµ Р°РєС‚СѓР°Р»СЊРЅРѕ?
+        if (board.getMyHead() != null && board.getMyTail() != null)
+            return evilCount > 20 &&
+                Math.abs(board.getMyHead().getY() - board.getMyTail().getY())
+                        + Math.abs(board.getMyHead().getX() - board.getMyTail().getX()) < 6;
+        else return false;
     }
 
     public static Direction chooseRightDirection(GameBoard board) {
         BoardPoint head = board.getMyHead();
         if (head == null || board.getElementAt(head) == BoardElementWithWeight.HEAD_SLEEP) {
-            prevState = State.SLEEP;
+            evilCount = head == null ? evilCount - 1 : 0;
             prevDirection = Direction.STOP;
-            evilCount = 0;
-            return prevDirection;
+            return Direction.STOP;
         }
-        State curState = prevState;
-        evilCount--;
-        if (prevState != State.EVIL && board.getElementAt(head) == BoardElementWithWeight.HEAD_EVIL) {
-            curState = State.EVIL;
-            evilCount = 10;
+        if (preEvil) {
+            evilCount += 10;
+            preEvil = false;
         }
-        if (board.getElementAt(head) != BoardElementWithWeight.HEAD_EVIL) {
-            curState = State.USUAL;
-            evilCount = 0;
-        }
-        // Определяем направление
-        Direction curDirection = prevDirection;
-        System.out.println(head + " " + prevState + " " + curState + " " + evilCount);
-        prevState = curState;
-        // Объявляем массивы и множества для алгоритма поиска пути
-        int size = board.size(); // размер стороны карты, размер всего массива size^2
-        Set<BoardPoint> border = new HashSet<>(); // множество точек текущей границы
+        evilCount = evilCount == 0 ? 0 : evilCount - 1;
+        // РћР±СЉСЏРІР»СЏРµРј РјР°СЃСЃРёРІС‹ Рё РјРЅРѕР¶РµСЃС‚РІР° РґР»СЏ Р°Р»РіРѕСЂРёС‚РјР° РїРѕРёСЃРєР° РїСѓС‚Рё
+        int size = board.size(); // СЂР°Р·РјРµСЂ СЃС‚РѕСЂРѕРЅС‹ РєР°СЂС‚С‹, СЂР°Р·РјРµСЂ РІСЃРµРіРѕ РјР°СЃСЃРёРІР° size^2
+        Set<BoardPoint> border = new HashSet<>(); // РјРЅРѕР¶РµСЃС‚РІРѕ С‚РѕС‡РµРє С‚РµРєСѓС‰РµР№ РіСЂР°РЅРёС†С‹
         border.add(head);
-        Direction[] ways = new Direction[size * size]; // откуда пришли в эту точку
-        int[] weights = boardWeight(board, curState); // вес пути до этой точки
-        boolean[] visits = new boolean[size * size]; // посещена ли эта точка
-        List<BoardPoint> barriers = board.getBarriers(); // лист невозможных для USUAL
-        barriers.add(head);
-        List<BoardPoint> myBody = board.getMyBody();
-        barriers.addAll(myBody);
-        if (board.getMyLength() < 4)
-            barriers.addAll(board.getMyTail());
-        List<BoardPoint> barriersEvil = board.getBarriersEvil(); // лист невозможных для EVIL
-        barriers.add(head);
-        barriersEvil.addAll(myBody);
-        if (board.getMyLength() < 4)
-            barriersEvil.addAll(board.getMyTail());
-        List<BoardPoint> bounty = board.getBounty(); // лист наград для USUAL
-        List<BoardPoint> bountyEvil = board.getBountyEvil(); // лист наград для EVIL
+        Direction[] ways = new Direction[size * size]; // РѕС‚РєСѓРґР° РїСЂРёС€Р»Рё РІ СЌС‚Сѓ С‚РѕС‡РєСѓ
+        int[] weights = new int[size * size]; // РІРµСЃ РїСѓС‚Рё РґРѕ СЌС‚РѕР№ С‚РѕС‡РєРё
+        boolean[] visits = new boolean[size * size]; // РїРѕСЃРµС‰РµРЅР° Р»Рё СЌС‚Р° С‚РѕС‡РєР°
         int wayLength = 0;
-        while (!border.isEmpty()) { // пока граница непуста
-            HashSet<BoardPoint> neighbors = new HashSet<>(); // создаем множество точек - новая граница
-            for (BoardPoint point : border) { // для каждой точки старой границы смотрим всех ее соседей
-                Map<BoardPoint, Direction> fourPoints = new HashMap<>(); // четыре точки вокруг нашей
+        int avgWeight = 0;
+        while (!border.isEmpty()) { // РїРѕРєР° РіСЂР°РЅРёС†Р° РЅРµРїСѓСЃС‚Р°
+            int sumWeight = 0;
+            HashSet<BoardPoint> neighbors = new HashSet<>(); // СЃРѕР·РґР°РµРј РјРЅРѕР¶РµСЃС‚РІРѕ С‚РѕС‡РµРє - РЅРѕРІР°СЏ РіСЂР°РЅРёС†Р°
+            for (BoardPoint point : border) { // РІ СЌС‚РѕРј С†РёРєР»Рµ СЃРѕР·РґР°РµС‚СЃСЏ РЅРѕРІР°СЏ Р±РѕР»РµРµ С€РёСЂРѕРєР°СЏ РіСЂР°РЅРёС†Р°
+                int pointIndex = point.getY() * size + point.getX();
+                weights[pointIndex] = evilCount - 1 > wayLength ?
+                        board.getElementAt(point).getEvilWeight() :
+                        board.getElementAt(point).getWeight();
+                if (weights[pointIndex] < avgWeight && weights[pointIndex] > -100) {
+                    neighbors.add(point);
+                    sumWeight += weights[pointIndex];
+                    continue;
+                }
+                Map<BoardPoint, Direction> fourPoints = new HashMap<>(); // С‡РµС‚С‹СЂРµ С‚РѕС‡РєРё РІРѕРєСЂСѓРі РЅР°С€РµР№
                 fourPoints.put(point.shiftRight(), Direction.RIGHT);
                 fourPoints.put(point.shiftBottom(), Direction.DOWN);
                 fourPoints.put(point.shiftLeft(), Direction.LEFT);
                 fourPoints.put(point.shiftTop(), Direction.UP);
-                for (BoardPoint newPoint : fourPoints.keySet()) { // для этих четырех
-                    int index = newPoint.getY() * size + newPoint.getX(); // индекс на карте
-                    if (newPoint.getX() > 0 && newPoint.getY() > 0 &&
-                            newPoint.getX() < size && newPoint.getY() < size &&
-                            !visits[index]) { // только если эту точку еще не посещали
-                        if (curState == State.USUAL && barriers.contains(newPoint) ||
-                                curState == State.EVIL && barriersEvil.contains(newPoint)) {
-                            // если это барьер, то
-                            weights[index] = Integer.MIN_VALUE; // вес у нее отрицательный
-                            ways[index] = null; // пути в нее нет
-                            visits[index] = true;
-                        } else if (curState == State.USUAL && bounty.contains(newPoint) ||
-                                curState == State.EVIL && bountyEvil.contains(newPoint)) {
-                            if (weights[index] <= weights[index] + weights[point.getY() * size + point.getX()]) {
-                                // <= а не <, если точка не была посещена, то может быть и справа, и слева 0
-                                weights[index] = weights[index] + weights[point.getY() * size + point.getX()];
-                                ways[index] = fourPoints.get(newPoint);
-                                neighbors.add(point);
-                            }
-                            // TODO тут пока так, но надо: обратный путь
-                            // а может уже и не надо
-                            BoardPoint tmpPoint = point;
-                            Direction tmpDir = fourPoints.get(newPoint);
-                            while (!tmpPoint.equals(head)) {
-                                tmpDir = ways[tmpPoint.getY() * size + tmpPoint.getX()];
-                                switch (tmpDir) {
-                                    case UP:
-                                        tmpPoint = tmpPoint.shiftBottom();
-                                        break;
-                                    case DOWN:
-                                        tmpPoint = tmpPoint.shiftTop();
-                                        break;
-                                    case LEFT:
-                                        tmpPoint = tmpPoint.shiftRight();
-                                        break;
-                                    case RIGHT:
-                                        tmpPoint = tmpPoint.shiftLeft();
-                                        break;
-                                }
-                            }
-                            return tmpDir;
-                        } else if (weights[index] <= weights[index] + weights[point.getY() * size + point.getX()]) {
-                            // если там пусто
-                            weights[index] = weights[point.getY() * size + point.getX()];
-                            ways[index] = fourPoints.get(newPoint); // оттуда пришли
+                for (BoardPoint newPoint : fourPoints.keySet()) { // РґР»СЏ СЌС‚РёС… С‡РµС‚С‹СЂРµС…
+                    int index = newPoint.getY() * size + newPoint.getX(); // РёРЅРґРµРєСЃ РЅР° РєР°СЂС‚Рµ
+                    if (newPoint.getX() > 0 && newPoint.getY() > 0 && newPoint.getX() < size && newPoint.getY() < size
+                            && !visits[index]) {
+                        weights[index] = evilCount - 1 > wayLength ?
+                                board.getElementAt(newPoint).getEvilWeight() :
+                                board.getElementAt(newPoint).getWeight();
+                        if (wayLength == 0 &&
+                                (prevDirection == Direction.RIGHT && fourPoints.get(newPoint) == Direction.LEFT ||
+                                 prevDirection == Direction.LEFT && fourPoints.get(newPoint) == Direction.RIGHT ||
+                                 prevDirection == Direction.UP && fourPoints.get(newPoint) == Direction.DOWN ||
+                                 prevDirection == Direction.DOWN && fourPoints.get(newPoint) == Direction.UP))
+                            weights[index] = -100;
+                        if (weights[index] <= weights[index] + weights[pointIndex]
+                            && weights[index] > -100) {
+                            weights[index] = weights[index] + weights[pointIndex];
+                            ways[index] = fourPoints.get(newPoint);
+                            sumWeight += weights[index];
                             neighbors.add(newPoint);
                         }
                     }
+                    if (wayLength == 0 && board.hasElementAt(newPoint, FURY_PILL))
+                        preEvil = true;
                 }
             }
-            // тут отмечаем, что все точки новой границы посещены
-            for (BoardPoint newPoint : neighbors) {
-                int index = newPoint.getY() * size + newPoint.getX(); // индекс на карте
+            // С‚СѓС‚ РѕС‚РјРµС‡Р°РµРј, С‡С‚Рѕ РІСЃРµ С‚РѕС‡РєРё РЅРѕРІРѕР№ РіСЂР°РЅРёС†С‹ РїРѕСЃРµС‰РµРЅС‹
+            int maxWeight = avgWeight;
+            int maxIndex = -1;
+            for (BoardPoint newPoint : border) {
+                int index = newPoint.getY() * size + newPoint.getX(); // РёРЅРґРµРєСЃ РЅР° РєР°СЂС‚Рµ
                 visits[index] = true;
+                if (maxWeight < weights[index]) {
+                    maxWeight = weights[index];
+                    maxIndex = index;
+                }
+            }
+            if (maxIndex >= 0 && (maxWeight > 0 || (neighbors.isEmpty() && maxWeight >= avgWeight))) {
+                myPrint(size, ways, maxIndex, head, board);
+                System.out.println(evilCount);
+                Direction curDirection = Direction.STOP;
+                BoardPoint tmpPoint = new BoardPoint(maxIndex % size, maxIndex / size);
+                // TODO С‚СѓС‚ РїРѕРєР° С‚Р°Рє, РЅРѕ РЅР°РґРѕ: РѕР±СЂР°С‚РЅС‹Р№ РїСѓС‚СЊ
+                while (!tmpPoint.equals(head)) {
+                    curDirection = ways[tmpPoint.getY() * size + tmpPoint.getX()];
+                    switch (curDirection) {
+                        case UP:
+                            tmpPoint = tmpPoint.shiftBottom();
+                            break;
+                        case DOWN:
+                            tmpPoint = tmpPoint.shiftTop();
+                            break;
+                        case LEFT:
+                            tmpPoint = tmpPoint.shiftRight();
+                            break;
+                        case RIGHT:
+                            tmpPoint = tmpPoint.shiftLeft();
+                            break;
+                    }
+                }
+                prevDirection = curDirection;
+                return curDirection;
             }
             border = neighbors;
             wayLength++;
-            if (wayLength > 10) {
-                barriers.removeAll(myBody);
-                barriersEvil.removeAll(myBody);
-            }
+            avgWeight = border.size() > 0 ? sumWeight / border.size() : 0;
         }
-        return curDirection;
+        return Direction.STOP;
     }
 
-    private static int[] boardWeight(GameBoard board, State state) {
-        int size = board.size();
-        int[] weights = new int[size * size];
-        for (int i = 0; i < size * size; i++) {
-            if (state == State.EVIL)
-                weights[i] = board.getElementAt(new BoardPoint(i % size, i / size)).getEvilWeight();
-            else
-                weights[i] = board.getElementAt(new BoardPoint(i % size, i / size)).getWeight();
-        }
-        return weights;
-    }
-
-    private static void myPrint(int size, Direction[] ways, int index, BoardPoint head) {
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
+    private static void myPrint(int size, Direction[] ways, int index, BoardPoint head, GameBoard board) {
+        for (int j = 0; j < size; j++) {
+            for (int i = 0; i < size; i++) {
                 String s = "_";
-                if (ways[i * size + j] == Direction.UP) s = "^";
-                if (ways[i * size + j] == Direction.DOWN) s = "v";
-                if (ways[i * size + j] == Direction.LEFT) s = "<";
-                if (ways[i * size + j] == Direction.RIGHT) s = ">";
-                if (i * size + j == index) s = "$";
-                if (i * size + j == head.getY() * size + head.getX()) s = "X";
+                if (ways[j * size + i] == Direction.UP) s = "^";
+                if (ways[j * size + i] == Direction.DOWN) s = "v";
+                if (ways[j * size + i] == Direction.LEFT) s = "<";
+                if (ways[j * size + i] == Direction.RIGHT) s = ">";
+                if (j * size + i == index) s = "$";
+                if (i * size + j == head.getX() * size + head.getY()) s = "S";
+                if (board.hasElementAt(new BoardPoint(i, j), ENEMY_HEAD_EVIL, ENEMY_HEAD_FLY, ENEMY_HEAD_UP,
+                        ENEMY_HEAD_RIGHT, ENEMY_HEAD_DOWN, ENEMY_HEAD_LEFT)) s = "Y";
+                //if (board.hasElementAt(new BoardPoint(i, j), WALL)) s = "#";
+                if (board.hasElementAt(new BoardPoint(i, j), STONE)) s = "o";
                 System.out.print(s + " ");
             }
             System.out.println();
