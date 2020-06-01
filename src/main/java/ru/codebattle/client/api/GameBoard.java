@@ -1,8 +1,6 @@
 package ru.codebattle.client.api;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import lombok.Getter;
 
@@ -32,26 +30,6 @@ public class GameBoard {
 
     public List<BoardPoint> getStones() {
         return findAllElements(STONE);
-    }
-
-    public boolean isBarrierAt(BoardPoint point) {
-        return getBarriers().contains(point);
-    }
-
-    public boolean isBountyAt(BoardPoint point) {
-        return getBounty().contains(point);
-    }
-
-    public boolean isMyBody(BoardPoint point) {
-        return getMyBody().contains(point);
-    }
-
-    public boolean isMyTail(BoardPoint point) {
-        return getMyTail().contains(point);
-    }
-
-    public boolean isMe(BoardPoint point) {
-        return isMyTail(point) || isMyBody(point) || getMyHead() == point;
     }
 
     public int getMyLength() {
@@ -113,8 +91,8 @@ public class GameBoard {
                 BODY_RIGHT_UP, BODY_VERTICAL, STONE);
     }
 
-    public List<BoardPoint> getMyTail() {
-        return findAllElements(TAIL_END_DOWN, TAIL_END_LEFT, TAIL_END_RIGHT, TAIL_END_UP, TAIL_INACTIVE);
+    public BoardPoint getMyTail() {
+        return findFirstElement(TAIL_END_DOWN, TAIL_END_LEFT, TAIL_END_RIGHT, TAIL_END_UP, TAIL_INACTIVE);
     }
 
     public boolean hasElementAt(BoardPoint point, BoardElementWithWeight element) {
@@ -163,7 +141,45 @@ public class GameBoard {
     }
 
     public void boardPreProcess() {
-        // TODO подготовка карты
+        // TODO РїРѕРґРіРѕС‚РѕРІРєР° РєР°СЂС‚С‹
+        StringBuilder newBoard = new StringBuilder(boardString);
+        for (int i = 0; i < boardString.length(); i++) {
+            BoardPoint point = getPointByShift(i);
+            ArrayList<BoardElementWithWeight> constantElement = new ArrayList<>(Arrays.asList(WALL, START_FLOOR,
+                    OTHER, HEAD_DEAD, HEAD_DOWN, HEAD_EVIL, HEAD_FLY, HEAD_LEFT, HEAD_RIGHT, HEAD_UP,
+                    HEAD_SLEEP, ENEMY_HEAD_DEAD, ENEMY_HEAD_SLEEP));
+            if (!constantElement.contains(getElementAt(point))) {
+                if (hasElementAt(point, ENEMY_HEAD_EVIL, ENEMY_HEAD_FLY, ENEMY_HEAD_UP,
+                        ENEMY_HEAD_RIGHT, ENEMY_HEAD_DOWN, ENEMY_HEAD_LEFT)) {
+                    Set<BoardPoint> fourPoint = new HashSet<>(Arrays.asList(point.shiftBottom(),
+                            point.shiftLeft(), point.shiftRight(), point.shiftTop()));
+                    for (BoardPoint neiPoint : fourPoint) {
+                        if (!constantElement.contains(getElementAt(neiPoint)))
+                            newBoard.replace(getShiftByPoint(neiPoint), getShiftByPoint(neiPoint) + 1,
+                                    String.valueOf(getElementAt(point)));
+                    }
+                } else {
+                    int wallCount = 0;
+                    int stoneCount = 0;
+                    Set<BoardPoint> fourPoint = new HashSet<>(Arrays.asList(point.shiftBottom(),
+                            point.shiftLeft(), point.shiftRight(), point.shiftTop()));
+                    for (BoardPoint neiPoint : fourPoint) {
+                        if (getElementAt(neiPoint) == WALL)
+                            wallCount++;
+                        else if (getElementAt(neiPoint) == STONE)
+                            stoneCount++;
+                    }
+                    if (wallCount >= 3)
+                        newBoard.replace(getShiftByPoint(point), getShiftByPoint(point) + 1,
+                                String.valueOf(WALL.symbol));
+                    else if (wallCount + stoneCount >= 3)
+                        newBoard.replace(getShiftByPoint(point), getShiftByPoint(point) + 1,
+                                String.valueOf(STONE.symbol));
+
+                }
+            }
+        }
+        boardString = new String(newBoard);
     }
 
     public boolean hasElementAt(BoardPoint point, BoardElementWithWeight... elements) {
