@@ -130,8 +130,7 @@ public class Strategy {
     }
 
     private static int getWeight(BoardPoint point, Direction direction, int wayLength, GameBoard board) {
-        int weight = 0;
-        weight = evilCount - 1 > wayLength ?
+        int weight = evilCount - 1 > wayLength ?
                 board.getElementAt(point).getEvilWeight() :
                 board.getElementAt(point).getWeight();
         if (board.getMyBody().size() == 0 && point.equals(board.getMyTail()) && (
