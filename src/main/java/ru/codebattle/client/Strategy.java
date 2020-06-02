@@ -140,15 +140,13 @@ public class Strategy {
                 point.shiftTop().equals(board.getMyHead())  && direction == Direction.DOWN)) {
             weight = BAD_WEIGHT;
         }
-        if (board.getEnemyHeads().contains(point)) {
+        if (board.getEnemyHeads().contains(point))
             if (evilCount - 1 > wayLength && !board.hasElementAt(point, ENEMY_HEAD_EVIL) ||
                     board.getEnemyBodies().size() / board.getEnemyHeads().size() <
                             board.getMyBody().size() + 2 + board.getEnemyHeads().size())
                 weight = 30 - wayLength + evilCount;
             else
                 weight = BAD_WEIGHT;
-            System.out.println("Enemy head's weight: " + weight);
-        }
         if (board.hasElementAt(point, FURY_PILL))
             weight -= evilCount;
         return weight == 0 || weight == BAD_WEIGHT ? weight : weight - wayLength;
