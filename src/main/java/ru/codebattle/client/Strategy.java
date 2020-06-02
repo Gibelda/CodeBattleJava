@@ -1,6 +1,5 @@
 package ru.codebattle.client;
 
-import ru.codebattle.client.api.BoardElementWithWeight;
 import ru.codebattle.client.api.BoardPoint;
 import ru.codebattle.client.api.Direction;
 import ru.codebattle.client.api.GameBoard;
@@ -8,7 +7,6 @@ import ru.codebattle.client.api.GameBoard;
 import java.util.*;
 
 import static ru.codebattle.client.api.BoardElementWithWeight.*;
-import static ru.codebattle.client.api.BoardElementWithWeight.ENEMY_HEAD_LEFT;
 
 public class Strategy {
     static int evilCount = 0;
@@ -27,12 +25,12 @@ public class Strategy {
 
     public static Direction chooseRightDirection(GameBoard board) {
         BoardPoint head = board.getMyHead();
-        if (head == null || board.getElementAt(head) == BoardElementWithWeight.HEAD_SLEEP) {
+        if (head == null || board.getElementAt(head) == HEAD_SLEEP) {
             evilCount = head == null ? evilCount - 1 : 0;
             prevDirection = Direction.STOP;
             return Direction.STOP;
         }
-        if (preEvil) {
+        if (preEvil && board.hasElementAt(head, HEAD_EVIL)) {
             evilCount += 10;
             preEvil = false;
         }
@@ -99,6 +97,9 @@ public class Strategy {
                 System.out.println("Reward: " + maxIndex + ", weight: " + maxWeight);
                 System.out.println("I am evil: " + evilCount);
                 System.out.println("Distance: " + wayLength);
+                System.out.println("Enemy: " + board.getEnemyHeads().size() +
+                        ", common length: " + board.getEnemyBodies().size());
+                System.out.println("My length: " + board.getMyBody().size());
                 Direction curDirection = Direction.STOP;
                 BoardPoint tmpPoint = new BoardPoint(maxIndex % size, maxIndex / size);
                 while (!tmpPoint.equals(head)) {
@@ -139,13 +140,15 @@ public class Strategy {
                 prevDirection == Direction.DOWN && direction == Direction.UP))
             weight = BAD_WEIGHT;
         if (board.getEnemyHeads().contains(point)) {
-            if (evilCount - 1 > wayLength && !board.hasElementAt(point, BoardElementWithWeight.ENEMY_HEAD_EVIL) ||
+            if (evilCount - 1 > wayLength && !board.hasElementAt(point, ENEMY_HEAD_EVIL) ||
                     board.getEnemyBodies().size() / board.getEnemyHeads().size() <
                             board.getMyBody().size() + 2 + board.getEnemyHeads().size())
                 weight = 30 - wayLength + evilCount;
             else
                 weight = BAD_WEIGHT;
         }
+        if (board.hasElementAt(point, FURY_PILL))
+            weight -= evilCount;
         return weight == 0 || weight == BAD_WEIGHT ? weight : weight - wayLength;
     }
 
