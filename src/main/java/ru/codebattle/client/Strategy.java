@@ -44,7 +44,7 @@ public class Strategy {
         boolean[] visits = new boolean[size * size]; // посещена ли эта точка
         int wayLength = 0;
         int avgWeight = 0;
-        while (!border.isEmpty() && wayLength <= size * size) { // пока граница непуста
+        while (!border.isEmpty() && wayLength <= size) { // пока граница непуста
             int sumWeight = 0;
             HashSet<BoardPoint> neighbors = new HashSet<>(); // создаем множество точек - новая граница
             for (BoardPoint point : border) { // в этом цикле создается новая более широкая граница
@@ -134,11 +134,13 @@ public class Strategy {
         weight = evilCount - 1 > wayLength ?
                 board.getElementAt(point).getEvilWeight() :
                 board.getElementAt(point).getWeight();
-        if (wayLength == 0 && (prevDirection == Direction.RIGHT && direction == Direction.LEFT ||
-                prevDirection == Direction.LEFT && direction == Direction.RIGHT ||
-                prevDirection == Direction.UP && direction == Direction.DOWN ||
-                prevDirection == Direction.DOWN && direction == Direction.UP))
+        if (board.getMyBody().size() == 0 && point.equals(board.getMyTail()) && (
+                point.shiftLeft().equals(board.getMyHead()) && direction == Direction.RIGHT ||
+                point.shiftRight().equals(board.getMyHead())  && direction == Direction.LEFT ||
+                point.shiftBottom().equals(board.getMyHead()) && direction == Direction.UP ||
+                point.shiftTop().equals(board.getMyHead())  && direction == Direction.DOWN)) {
             weight = BAD_WEIGHT;
+        }
         if (board.getEnemyHeads().contains(point)) {
             if (evilCount - 1 > wayLength && !board.hasElementAt(point, ENEMY_HEAD_EVIL) ||
                     board.getEnemyBodies().size() / board.getEnemyHeads().size() <
@@ -146,6 +148,7 @@ public class Strategy {
                 weight = 30 - wayLength + evilCount;
             else
                 weight = BAD_WEIGHT;
+            System.out.println("Enemy head's weight: " + weight);
         }
         if (board.hasElementAt(point, FURY_PILL))
             weight -= evilCount;
