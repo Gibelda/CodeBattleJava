@@ -7,15 +7,15 @@ import lombok.RequiredArgsConstructor;
 @Getter
 public enum BoardElementWithWeight {
     NONE(' ', 0, 0),         // пустое место
-    WALL('☼', -100, -100),         // а это стенка
-    START_FLOOR('#', -100, -100),  // место старта змей
-    OTHER('?', -100, -100),        // этого ты никогда не увидишь :)
+    WALL('☼', -1000, -1000),         // а это стенка
+    START_FLOOR('#', -1000, -1000),  // место старта змей
+    OTHER('?', -1000, -1000),        // этого ты никогда не увидишь :)
 
-    APPLE('○', 5, 5),        // яблоки надо кушать от них становишься длинее
-    STONE('●', -3, 3),        // а это кушать не стоит - от этого укорачиваешься
+    APPLE('○', 30, 30),        // яблоки надо кушать от них становишься длинее
+    STONE('●', -5, 10),        // а это кушать не стоит - от этого укорачиваешься
     FLYING_PILL('©', 0, 0),  // таблетка полета - дает суперсилы
-    FURY_PILL('®', 5, 4),    // таблетка ярости - дает суперсилы
-    GOLD('$', 5, 5),         // золото - просто очки
+    FURY_PILL('®', 30, 30),    // таблетка ярости - дает суперсилы
+    GOLD('$', 30, 30),         // золото - просто очки
 
     // голова твоей змеи в разных состояниях и напрвлениях
     HEAD_DOWN('▼', 0, 0),
@@ -29,28 +29,28 @@ public enum BoardElementWithWeight {
 
     // хвост твоей змейки
     TAIL_END_DOWN('╙', 0, 0),
-    TAIL_END_LEFT('╘', 0, -1),
+    TAIL_END_LEFT('╘', 0, 0),
     TAIL_END_UP('╓',0, 0),
     TAIL_END_RIGHT('╕', 0, 0),
     TAIL_INACTIVE('~', 0, 0),
 
     // туловище твоей змейки
-    BODY_HORIZONTAL('═', -5, -5),
-    BODY_VERTICAL('║', -5, -5),
-    BODY_LEFT_DOWN('╗', -5, -5),
-    BODY_LEFT_UP('╝', -5, -5),
-    BODY_RIGHT_DOWN('╔', -5, -5),
-    BODY_RIGHT_UP('╚', -5, -5),
+    BODY_HORIZONTAL('═', -10, -10),
+    BODY_VERTICAL('║', -10, -10),
+    BODY_LEFT_DOWN('╗', -10, -10),
+    BODY_LEFT_UP('╝', -10, -10),
+    BODY_RIGHT_DOWN('╔', -10, -10),
+    BODY_RIGHT_UP('╚', -10, -10),
 
     // змейки противников
-    ENEMY_HEAD_DOWN('˅', -100, 2),
-    ENEMY_HEAD_LEFT('<', -100, 2),
-    ENEMY_HEAD_RIGHT('>', -100, 2),
-    ENEMY_HEAD_UP('˄', -100, 2),
-    ENEMY_HEAD_DEAD('☺', -100, -100),   // этот раунд противник проиграл
-    ENEMY_HEAD_EVIL('♣', -100, 1),   // противник скушал таблетку ярости
+    ENEMY_HEAD_DOWN('˅', -1000, 30),
+    ENEMY_HEAD_LEFT('<', -1000, 30),
+    ENEMY_HEAD_RIGHT('>', -1000, 30),
+    ENEMY_HEAD_UP('˄', -1000, 30),
+    ENEMY_HEAD_DEAD('☺', -1000, -1000),   // этот раунд противник проиграл
+    ENEMY_HEAD_EVIL('♣', -1000, 20),   // противник скушал таблетку ярости
     ENEMY_HEAD_FLY('♦', 0, 0),    // противник скушал таблетку полета
-    ENEMY_HEAD_SLEEP('ø', -100, -100),  // змейка противника ожидает начала раунда
+    ENEMY_HEAD_SLEEP('ø', -1000, -1000),  // змейка противника ожидает начала раунда
 
     // хвосты змеек противников
     ENEMY_TAIL_END_DOWN('¤', -5, 0),
@@ -60,12 +60,12 @@ public enum BoardElementWithWeight {
     ENEMY_TAIL_INACTIVE('*', -5, 0),
 
     // туловище змеек противников
-    ENEMY_BODY_HORIZONTAL('─', -100, 6),
-    ENEMY_BODY_VERTICAL('│', -100, 6),
-    ENEMY_BODY_LEFT_DOWN('┐', -100, 6),
-    ENEMY_BODY_LEFT_UP('┘', -100, 6),
-    ENEMY_BODY_RIGHT_DOWN('┌', -100, 6),
-    ENEMY_BODY_RIGHT_UP('└', -100, 6);
+    ENEMY_BODY_HORIZONTAL('─', -1000, 30),
+    ENEMY_BODY_VERTICAL('│', -1000, 30),
+    ENEMY_BODY_LEFT_DOWN('┐', -1000, 30),
+    ENEMY_BODY_LEFT_UP('┘', -1000, 30),
+    ENEMY_BODY_RIGHT_DOWN('┌', -1000, 30),
+    ENEMY_BODY_RIGHT_UP('└', -1000, 30);
 
     final char symbol;
     final int weight;
