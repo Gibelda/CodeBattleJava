@@ -25,7 +25,7 @@ public class SnakeBattleClient extends SnakeBattleBase {
     protected String doMove(GameBoard gameBoard) {
         clearScreen();
         gameBoard.boardPreProcess();
-        //gameBoard.printBoard();
+        gameBoard.boardPreProcess();
         SnakeAction action = callback.apply(gameBoard);
         var command = action.toString();
         System.out.println(command);

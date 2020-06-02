@@ -15,12 +15,13 @@ public class Strategy {
     static boolean preEvil = false;
     static Direction prevDirection;
 
+    static final int BAD_WEIGHT = -1000;
+
     public static boolean chooseAct(GameBoard board) {
-        // TODO а это вообще актуально?
         if (board.getMyHead() != null && board.getMyTail() != null)
-            return evilCount > 20 &&
+            return (evilCount > 20 &&
                 Math.abs(board.getMyHead().getY() - board.getMyTail().getY())
-                        + Math.abs(board.getMyHead().getX() - board.getMyTail().getX()) < 6;
+                        + Math.abs(board.getMyHead().getX() - board.getMyTail().getX()) < 6);
         else return false;
     }
 
@@ -45,19 +46,19 @@ public class Strategy {
         boolean[] visits = new boolean[size * size]; // посещена ли эта точка
         int wayLength = 0;
         int avgWeight = 0;
-        while (!border.isEmpty()) { // пока граница непуста
+        while (!border.isEmpty() && wayLength <= size * size) { // пока граница непуста
             int sumWeight = 0;
             HashSet<BoardPoint> neighbors = new HashSet<>(); // создаем множество точек - новая граница
             for (BoardPoint point : border) { // в этом цикле создается новая более широкая граница
+                // если точка весит меньше среднего веса, но при этом не "плохая",
+                // то просто добавляем ее в следующую границу и не проверяем соседей
                 int pointIndex = point.getY() * size + point.getX();
-                weights[pointIndex] = evilCount - 1 > wayLength ?
-                        board.getElementAt(point).getEvilWeight() :
-                        board.getElementAt(point).getWeight();
-                if (weights[pointIndex] < avgWeight && weights[pointIndex] > -100) {
+                if (weights[pointIndex] < avgWeight && weights[pointIndex] > BAD_WEIGHT) {
                     neighbors.add(point);
                     sumWeight += weights[pointIndex];
                     continue;
                 }
+                boolean expansion = false;
                 Map<BoardPoint, Direction> fourPoints = new HashMap<>(); // четыре точки вокруг нашей
                 fourPoints.put(point.shiftRight(), Direction.RIGHT);
                 fourPoints.put(point.shiftBottom(), Direction.DOWN);
@@ -67,26 +68,20 @@ public class Strategy {
                     int index = newPoint.getY() * size + newPoint.getX(); // индекс на карте
                     if (newPoint.getX() > 0 && newPoint.getY() > 0 && newPoint.getX() < size && newPoint.getY() < size
                             && !visits[index]) {
-                        weights[index] = evilCount - 1 > wayLength ?
-                                board.getElementAt(newPoint).getEvilWeight() :
-                                board.getElementAt(newPoint).getWeight();
-                        if (wayLength == 0 &&
-                                (prevDirection == Direction.RIGHT && fourPoints.get(newPoint) == Direction.LEFT ||
-                                 prevDirection == Direction.LEFT && fourPoints.get(newPoint) == Direction.RIGHT ||
-                                 prevDirection == Direction.UP && fourPoints.get(newPoint) == Direction.DOWN ||
-                                 prevDirection == Direction.DOWN && fourPoints.get(newPoint) == Direction.UP))
-                            weights[index] = -100;
-                        if (weights[index] <= weights[index] + weights[pointIndex]
-                            && weights[index] > -100) {
-                            weights[index] = weights[index] + weights[pointIndex];
+                        weights[index] = getWeight(newPoint, fourPoints.get(newPoint), wayLength, board);
+                        if (weights[index] <= weights[index] + weights[pointIndex] && weights[index] > BAD_WEIGHT) {
+                            weights[index] += weights[pointIndex];
                             ways[index] = fourPoints.get(newPoint);
                             sumWeight += weights[index];
+                            expansion = true;
                             neighbors.add(newPoint);
                         }
                     }
                     if (wayLength == 0 && board.hasElementAt(newPoint, FURY_PILL))
                         preEvil = true;
                 }
+                if (!expansion) // если мы из этой точки не расширились - добавим ее обратно
+                    neighbors.add(point);
             }
             // тут отмечаем, что все точки новой границы посещены
             int maxWeight = avgWeight;
@@ -94,17 +89,18 @@ public class Strategy {
             for (BoardPoint newPoint : border) {
                 int index = newPoint.getY() * size + newPoint.getX(); // индекс на карте
                 visits[index] = true;
-                if (maxWeight < weights[index]) {
+                if (maxWeight <= weights[index]) {
                     maxWeight = weights[index];
                     maxIndex = index;
                 }
             }
-            if (maxIndex >= 0 && (maxWeight > 0 || (neighbors.isEmpty() && maxWeight >= avgWeight))) {
+            if (maxIndex >= 0 && maxWeight != 0) {
                 myPrint(size, ways, maxIndex, head, board);
-                System.out.println(evilCount);
+                System.out.println("Reward: " + maxIndex + ", weight: " + maxWeight);
+                System.out.println("I am evil: " + evilCount);
+                System.out.println("Distance: " + wayLength);
                 Direction curDirection = Direction.STOP;
                 BoardPoint tmpPoint = new BoardPoint(maxIndex % size, maxIndex / size);
-                // TODO тут пока так, но надо: обратный путь
                 while (!tmpPoint.equals(head)) {
                     curDirection = ways[tmpPoint.getY() * size + tmpPoint.getX()];
                     switch (curDirection) {
@@ -132,6 +128,27 @@ public class Strategy {
         return Direction.STOP;
     }
 
+    private static int getWeight(BoardPoint point, Direction direction, int wayLength, GameBoard board) {
+        int weight = 0;
+        weight = evilCount - 1 > wayLength ?
+                board.getElementAt(point).getEvilWeight() :
+                board.getElementAt(point).getWeight();
+        if (wayLength == 0 && (prevDirection == Direction.RIGHT && direction == Direction.LEFT ||
+                prevDirection == Direction.LEFT && direction == Direction.RIGHT ||
+                prevDirection == Direction.UP && direction == Direction.DOWN ||
+                prevDirection == Direction.DOWN && direction == Direction.UP))
+            weight = BAD_WEIGHT;
+        if (board.getEnemyHeads().contains(point)) {
+            if (evilCount - 1 > wayLength && !board.hasElementAt(point, BoardElementWithWeight.ENEMY_HEAD_EVIL) ||
+                    board.getEnemyBodies().size() / board.getEnemyHeads().size() <
+                            board.getMyBody().size() + 2 + board.getEnemyHeads().size())
+                weight = 30 - wayLength + evilCount;
+            else
+                weight = BAD_WEIGHT;
+        }
+        return weight == 0 || weight == BAD_WEIGHT ? weight : weight - wayLength;
+    }
+
     private static void myPrint(int size, Direction[] ways, int index, BoardPoint head, GameBoard board) {
         for (int j = 0; j < size; j++) {
             for (int i = 0; i < size; i++) {
@@ -144,7 +161,7 @@ public class Strategy {
                 if (i * size + j == head.getX() * size + head.getY()) s = "S";
                 if (board.hasElementAt(new BoardPoint(i, j), ENEMY_HEAD_EVIL, ENEMY_HEAD_FLY, ENEMY_HEAD_UP,
                         ENEMY_HEAD_RIGHT, ENEMY_HEAD_DOWN, ENEMY_HEAD_LEFT)) s = "Y";
-                //if (board.hasElementAt(new BoardPoint(i, j), WALL)) s = "#";
+                if (board.hasElementAt(new BoardPoint(i, j), WALL)) s = "#";
                 if (board.hasElementAt(new BoardPoint(i, j), STONE)) s = "o";
                 System.out.print(s + " ");
             }
