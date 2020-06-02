@@ -14,8 +14,8 @@ public class Main {
         client.run(gameBoard -> {
             long date = new Date().getTime();
             Direction direction = Strategy.chooseRightDirection(gameBoard);
-            System.out.println("Time: " + (new Date().getTime() - date) + " milliseconds");
             boolean act = Strategy.chooseAct(gameBoard);
+            System.out.println("Time: " + (new Date().getTime() - date) + " milliseconds");
             return new SnakeAction(act, direction);
         });
         System.in.read();
