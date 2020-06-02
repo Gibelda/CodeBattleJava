@@ -134,10 +134,10 @@ public class Strategy {
                 board.getElementAt(point).getEvilWeight() :
                 board.getElementAt(point).getWeight();
         if (wayLength == 0 && (
-                point.shiftLeft().equals(board.getMyTail()) && direction == Direction.LEFT ||
-                point.shiftRight().equals(board.getMyTail())  && direction == Direction.RIGHT ||
-                point.shiftBottom().equals(board.getMyTail()) && direction == Direction.DOWN ||
-                point.shiftTop().equals(board.getMyTail())  && direction == Direction.UP))
+                prevDirection == Direction.LEFT && direction == Direction.RIGHT ||
+                prevDirection == Direction.RIGHT  && direction == Direction.LEFT ||
+                prevDirection == Direction.DOWN && direction == Direction.UP ||
+                prevDirection == Direction.UP && direction == Direction.DOWN))
             weight = BAD_WEIGHT;
         if (board.getEnemyHeads().contains(point))
             if (evilCount - 1 > wayLength && !board.hasElementAt(point, ENEMY_HEAD_EVIL) ||
